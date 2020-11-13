@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>My Location History</title>
+  <link rel="stylesheet" href="public/style.css">
+</head>
+
+<body>
+  <div id="heatmap-actions">
+    <div class="group">
+      <div class="subject">Radius <span id=radiusNum>21</span></div>
+      <button onclick="changeRadius(true)">Up</button>
+      <button onclick="changeRadius(false)">Down</button>
+    </div>
+    <div class="group">
+      <div class="subject">Opacity <span id=opacityNum>.6</span></div>
+      <button onclick="changeOpacity(true)">Up</button>
+      <button onclick="changeOpacity(false)">Down</button>
+    </div>
+  </div>
+  <div id="map"></div>
+
+  <script>
+    const maxI = 200,
+      rad = 20,
+      opacity = .6;
+    var map, heatmap;
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 5,
+        center: {
+          lat: 20.5937,
+          lng: 78.9629
+        },
+        clickableIcons: false,
+        mapTypeId: 'roadmap'
+      });
+
+      fetch('./public/location.json').then(function (response) {
+        response.json().then(function (result) {
+          let locations = result.locations.map((val) => {
+            return new google.maps.LatLng(val.latitudeE7 * (10 ** -7), val.longitudeE7 * (10 ** -7));
+          })
+
+          heatmap = new google.maps.visualization.HeatmapLayer({
+            data: locations,
+            map: map,
+            maxIntensity: maxI,
+            radius: rad,
+            opacity: opacity
+          });
+          document.getElementById('heatmap-actions').style.display = 'flex';
+        });
+      });
+    }
+
+    function changeRadius(bool) {
+      const step = 3,
+        min = 0,
+        max = 50;
+      let current = heatmap.get('radius');
+      let newValue = toggleUpDown(bool, current, step, min, max);
+
+      heatmap.set('radius', newValue);
+      document.getElementById("radiusNum").innerText = newValue;
+    };
+
+    function changeOpacity(bool) {
+      const step = .2,
+        min = 0,
+        max = 1;
+      let current = heatmap.get('opacity');
+      let newValue = toggleUpDown(bool, current, step, min, max);
+      let rounded = round(newValue, 1);
+
+      heatmap.set('opacity', rounded);
+      document.getElementById("opacityNum").innerText = rounded;
+    }
+
+    function toggleUpDown(bool, current, step, min, max) {
+      if (bool && current >= max) return current;
+      if (!bool && current <= min) return current;
+
+      if (bool) return current + step;
+      return current - step;
+    }
+
+    // Used to round the opacity toggle to one decimal place (JS ki pagalpanti ho rahi thi in short)
+    function round(value, precision) {
+      var multiplier = Math.pow(10, precision || 0);
+      return Math.round(value * multiplier) / multiplier;
+    }
+  </script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBbmISgjYWEvdJIMsJMtxrPKM-pGxWHkm4&libraries=visualization&callback=initMap">
+  </script>
+</body>
+
+</html>
